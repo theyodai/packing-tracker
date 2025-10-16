@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Учёт упаковки</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    input[type="number"] {
+      width: 60px;
+      padding: 6px;
+      font-size: 15px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px 12px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .add-btn {
+      background: #007aff;
+    }
+
+    .save-btn {
+      background: #34c759;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    .reset-btn {
+      background: #ff3b30;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .clear-history-btn {
+      background: #8e8e93;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .stats {
+      text-align: center;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-top: 10px;
+    }
+
+    .history {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .history table {
+      font-size: 14px;
+    }
+
+    .total-summary {
+      text-align: right;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>Учёт упаковки</h1>
+
+  <div class="card">
+    <table>
+      <tr>
+        <th>Тип</th>
+        <th>Цена</th>
+        <th>Кол-во</th>
+        <th>+</th>
+      </tr>
+      <tr>
+        <td>Маленький</td>
+        <td>0.35 ₽</td>
+        <td><input type="number" id="input-small" value="0" min="0" onchange="updateFromInput('small')"></td>
+        <td><button class="add-btn" onclick="add('small')">+</button></td>
+      </tr>
+      <tr>
+        <td>Большой</td>
+        <td>0.75 ₽</td>
+        <td><input type="number" id="input-big" value="0" min="0" onchange="updateFromInput('big')"></td>
+        <td><button class="add-btn" onclick="add('big')">+</button></td>
+      </tr>
+      <tr>
+        <td>У</td>
+        <td>1 ₽</td>
+        <td><input type="number" id="input-u" value="0" min="0" onchange="updateFromInput('u')"></td>
+        <td><button class="add-btn" onclick="add('u')">+</button></td>
+      </tr>
+    </table>
+
+    <div class="stats">
+      <hr>
+      <div>Всего товаров: <strong><span id="total-items">0</span></strong></div>
+      <div>Сумма: <strong><span id="total-sum">0.00</span> ₽</strong></div>
+    </div>
+
+    <button class="save-btn" onclick="saveDay()">💾 Сохранить день</button>
+    <button class="reset-btn" onclick="resetCounts()">♻️ Сбросить текущий день</button>
+    <button class="clear-history-btn" onclick="clearHistory()">🗑️ Очистить историю</button>
+  </div>
+
+  <div class="history card">
+    <h2 style="font-size:18px; margin-top:0;">История</h2>
+    <table id="history-table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Кол-во</th>
+          <th>Сумма (₽)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="total-summary" id="monthly-total"></div>
+  </div>
+
+  <script>
+    const prices = { small: 0.35, big: 0.75, u: 1.0 };
+    const counts = { small: 0, big: 0, u: 0 };
+
+    const els = {
+      small: document.getElementById('input-small'),
+      big: document.getElementById('input-big'),
+      u: document.getElementById('input-u'),
+      totalItems: document.getElementById('total-items'),
+      totalSum: document.getElementById('total-sum'),
+      historyBody: document.querySelector('#history-table tbody'),
+      monthlyTotal: document.getElementById('monthly-total')
+    };
+
+    function updateDisplay() {
+      els.small.value = counts.small;
+      els.big.value = counts.big;
+      els.u.value = counts.u;
+      const totalItems = counts.small + counts.big + counts.u;
+      const totalSum = counts.small * prices.small + counts.big * prices.big + counts.u * prices.u;
+      els.totalItems.textContent = totalItems;
+      els.totalSum.textContent = totalSum.toFixed(2);
+    }
+
+    function add(type) {
+      counts[type]++;
+      updateDisplay();
+    }
+
+    function updateFromInput(type) {
+      const value = parseInt(els[type].value) || 0;
+      counts[type] = Math.max(0, value);
+      updateDisplay();
+    }
+
+    function resetCounts() {
+      if (confirm("Сбросить текущие значения?")) {
+        counts.small = counts.big = counts.u = 0;
+        updateDisplay();
+      }
+    }
+
+    function saveDay() {
+      const totalItems = counts.small + counts.big + counts.u;
+      const totalSum = counts.small * prices.small + counts.big * prices.big + counts.u * prices.u;
+      if (totalItems === 0) {
+        alert("Нет данных для сохранения.");
+        return;
+      }
+
+      const today = new Date().toLocaleDateString('ru-RU');
+      let history = JSON.parse(localStorage.getItem('packingHistory') || '[]');
+      history.push({ date: today, totalItems, totalSum: totalSum.toFixed(2) });
+      localStorage.setItem('packingHistory', JSON.stringify(history));
+
+      alert("День сохранён!");
+      counts.small = counts.big = counts.u = 0;
+      updateDisplay();
+      loadHistory();
+    }
+
+    function loadHistory() {
+      let history = JSON.parse(localStorage.getItem('packingHistory') || '[]');
+      els.historyBody.innerHTML = '';
+      let monthlySum = 0;
+      history.forEach(entry => {
+        monthlySum += parseFloat(entry.totalSum);
+        const row = `<tr><td>${entry.date}</td><td>${entry.totalItems}</td><td>${entry.totalSum}</td></tr>`;
+        els.historyBody.insertAdjacentHTML('beforeend', row);
+      });
+      els.monthlyTotal.textContent = history.length
+        ? `Всего за месяц: ${monthlySum.toFixed(2)} ₽`
+        : '';
+    }
+
+    function clearHistory() {
+      if (confirm("Очистить всю историю? Это действие нельзя отменить.")) {
+        localStorage.removeItem('packingHistory');
+        loadHistory();
+      }
+    }
+
+    loadHistory();
+    updateDisplay();
+  </script>
+</body>
+</html>
